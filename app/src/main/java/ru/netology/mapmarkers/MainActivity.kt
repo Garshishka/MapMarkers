@@ -5,7 +5,7 @@ import android.content.pm.PackageManager
 import android.graphics.PointF
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.annotation.DrawableRes
+import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
@@ -19,12 +19,15 @@ import com.yandex.mapkit.map.PlacemarkMapObject
 import com.yandex.mapkit.user_location.UserLocationLayer
 import com.yandex.runtime.image.ImageProvider
 import ru.netology.mapmarkers.databinding.ActivityMainBinding
+import ru.netology.mapmarkers.di.DependencyContainer
 import ru.netology.mapmarkers.listeners.MapCameraListener
 import ru.netology.mapmarkers.listeners.MapInputListener
 import ru.netology.mapmarkers.listeners.MapLocationListener
 
 
 class MainActivity : AppCompatActivity() {
+    private val container = DependencyContainer.getInstance()
+
     private var locationPermission = false
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
@@ -37,14 +40,19 @@ class MainActivity : AppCompatActivity() {
 
     lateinit var binding: ActivityMainBinding
 
+
+    val viewModel: MainViewModel by viewModels {
+        ViewModelFactory(container.repository)
+    }
+
+
     private var userLocation = Point(0.0, 0.0)
     private lateinit var mapObjectCollection: MapObjectCollection
     private lateinit var userLocationLayer: UserLocationLayer
     private val mapLocationListener = MapLocationListener(this, this)
     private val cameraListener = MapCameraListener(this)
     private val mapInputListener = MapInputListener(this, this)
-
-    private val places = mutableListOf<String>()
+    private var firstTimePlacingMarkers = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -59,7 +67,6 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setUpMap() {
-
         val mapKit = MapKitFactory.getInstance()
         mapObjectCollection = binding.mapView.map.mapObjects.addCollection()
         userLocationLayer = mapKit.createUserLocationLayer(binding.mapView.mapWindow)
@@ -67,8 +74,12 @@ class MainActivity : AppCompatActivity() {
         userLocationLayer.isHeadingEnabled = false
 
         userLocationLayer.setObjectListener(mapLocationListener)
-        binding.mapView.map.addCameraListener(cameraListener)
-        binding.mapView.map.addInputListener(mapInputListener)
+        binding.mapView.map.apply {
+            addCameraListener(cameraListener)
+            addInputListener(mapInputListener)
+            //addTapListener()
+        }
+
     }
 
     private fun subscribe() {
@@ -78,7 +89,7 @@ class MainActivity : AppCompatActivity() {
                     cameraToUserPosition()
                     cameraListener.followUserLocation = true
                 } else {
-                    requestPermissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+                    requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                 }
             }
             headingFab.setOnClickListener {
@@ -88,15 +99,25 @@ class MainActivity : AppCompatActivity() {
                 val cameraPosition = binding.mapView.map.cameraPosition
                 moveMap(cameraPosition.target, cameraPosition.zoom, 0f, 0f)
             }
-            placeListFab.setOnClickListener{
+            placeListFab.setOnClickListener {
                 placesView.isVisible = !placesView.isVisible
             }
-
-            placesView.adapter = PlacesAdapter(places)
         }
+
+        val adapter = PlacesAdapter(this)//, places)
+        binding.placesView.adapter = adapter
+
+        viewModel.data.observe(this) { places ->
+            adapter.submitList(places)
+            if (firstTimePlacingMarkers) {
+                places.forEach { addMarker(it.point) }
+                firstTimePlacingMarkers = false
+            }
+        }
+
     }
 
-    private fun moveMap(target: Point, zoom: Float = 16f, azimuth: Float = 0f, tilt: Float = 0f) {
+    fun moveMap(target: Point, zoom: Float = 16f, azimuth: Float = 0f, tilt: Float = 0f) {
         binding.mapView.map.move(
             CameraPosition(target, zoom, azimuth, tilt),
             Animation(Animation.Type.SMOOTH, 3f),
@@ -104,17 +125,21 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
-    fun addMarker(
-        target : Point,
-        @DrawableRes imageRes: Int = R.drawable.baseline_location_48,
+    fun addPlace(target: Point) {
+        viewModel.save(target)
+        addMarker(target)
+    }
+
+    private fun addMarker(
+        target: Point,
+        pinGraphic: String = "location_pin.png",
         userData: Any? = null
     ): PlacemarkMapObject {
         val marker = mapObjectCollection.addPlacemark(
             target,
-            ImageProvider.fromResource(this, imageRes)
+            ImageProvider.fromAsset(this, pinGraphic)
         )
         marker.userData = userData
-        places.add(target.toString())
         //markerTapListener?.let { marker.addTapListener(it) }
         return marker
     }
@@ -140,14 +165,14 @@ class MainActivity : AppCompatActivity() {
         when {
             ContextCompat.checkSelfPermission(
                 this,
-                android.Manifest.permission.ACCESS_FINE_LOCATION
+                Manifest.permission.ACCESS_FINE_LOCATION
             ) == PackageManager.PERMISSION_GRANTED -> {
                 locationPermission = true
             }
-            shouldShowRequestPermissionRationale(android.Manifest.permission.ACCESS_FINE_LOCATION) -> {
+            shouldShowRequestPermissionRationale(Manifest.permission.ACCESS_FINE_LOCATION) -> {
                 showPermissionSnackbar()
             }
-            else -> requestPermissionLauncher.launch(android.Manifest.permission.ACCESS_FINE_LOCATION)
+            else -> requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
         }
     }
 
