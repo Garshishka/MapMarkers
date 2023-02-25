@@ -6,10 +6,12 @@ import android.graphics.PointF
 import android.os.Bundle
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import com.google.android.material.snackbar.Snackbar
+import com.google.android.material.textfield.TextInputEditText
 import com.yandex.mapkit.Animation
 import com.yandex.mapkit.MapKitFactory
 import com.yandex.mapkit.geometry.Point
@@ -126,9 +128,32 @@ class MainActivity : AppCompatActivity() {
     }
 
     fun addPlace(target: Point) {
-        viewModel.save(target)
-        addMarker(target)
+        val alertDialog: AlertDialog = this.let {
+            val builder = AlertDialog.Builder(it)
+            builder.apply {
+                setMessage(getString(R.string.dialog_new_place))
+                val textInput = makeTextInput()
+                setView(textInput)
+                setPositiveButton(
+                    "ok"
+                ) { dialog, id ->
+                    viewModel.save(target, textInput.text.toString())
+                    addMarker(target)
+                }
+                setNegativeButton(
+                    "no"
+                ) { dialog, id ->
+                }
+            }
+            builder.create()
+        }
+        alertDialog.show()
     }
+
+    fun makeTextInput(): TextInputEditText = TextInputEditText(this).apply {
+        setText(R.string.new_place)
+    }
+
 
     private fun addMarker(
         target: Point,

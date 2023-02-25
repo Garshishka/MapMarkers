@@ -9,7 +9,6 @@ import ru.netology.mapmarkers.data.PlacesRepository
 private val empty = PlaceObject(
     0, Point(0.0, 0.0), "no name"
 )
-private var name = 1
 
 class MainViewModel(private val repository: PlacesRepository) : ViewModel() {
     val data = repository.getAll()
@@ -19,14 +18,13 @@ class MainViewModel(private val repository: PlacesRepository) : ViewModel() {
         edited.value = empty
     }
 
-    fun save(point: Point) {
+    fun save(point: Point,name: String) {
         edited.value?.let {
-            edited.value = it.copy(point = point, name = name.toString())
+            edited.value = it.copy(point = point, name = name)
         }
         edited.value?.let {
             repository.save(it)
         }
-        name++
         empty()
     }
 }

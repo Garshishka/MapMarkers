@@ -4,4 +4,6 @@
     <string name="retry">Retry</string>
     <string name="need_geolocation">You need geolocation permission to use this feature</string>
     <string name="permission">Permission</string>
+    <string name="new_place">New place</string>
+    <string name="dialog_new_place">Set the name for new place</string>
 </resources>

@@ -5,4 +5,6 @@
     <string name="retry">Повторить</string>
     <string name="need_geolocation">Необходимо разрешение на геолокацию чтобы использовать эту функцию</string>
     <string name="permission">Разрешение</string>
+    <string name="new_place">Новое место</string>
+    <string name="dialog_new_place">Задайте имя для нового места</string>
 </resources>
