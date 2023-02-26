@@ -65,7 +65,6 @@ class MainActivity : AppCompatActivity() {
 
     }
     private val onMapInteractionListener = object : OnMapInteractionListener {
-
         override fun onMapLongClick(point: Point) {
             addPlace(point)
         }
@@ -79,17 +78,36 @@ class MainActivity : AppCompatActivity() {
             moveMap(place.point)
             interactionWithMark(place)
         }
+
+        override fun setAnchor() {
+            userLocationLayer.setAnchor(
+                PointF(
+                    (binding.mapView.width() * 0.5).toFloat(),
+                    (binding.mapView.height() * 0.5).toFloat()
+                ),
+                PointF(
+                    (binding.mapView.width() * 0.5).toFloat(),
+                    (binding.mapView.height() * 0.83).toFloat()
+                )
+            )
+        }
+
+        override fun noAnchor() {
+            userLocationLayer.resetAnchor()
+            userLocationLayer.isHeadingEnabled = false
+        }
     }
 
     //Map part
     private var userLocation = Point(0.0, 0.0)
     private lateinit var mapObjectCollection: MapObjectCollection
     private lateinit var userLocationLayer: UserLocationLayer
-    private val mapLocationListener = MapLocationListener(this, this)
-    private val cameraListener = MapCameraListener(this)
+    private val cameraListener = MapCameraListener(onMapInteractionListener)
     private val mapInputListener = MapInputListener(onMapInteractionListener)
     private var markerTapListener = PlaceTapListener(onMapInteractionListener)
     private var firstTimePlacingMarkers = true
+
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -110,7 +128,6 @@ class MainActivity : AppCompatActivity() {
         userLocationLayer.isVisible = true
         userLocationLayer.isHeadingEnabled = false
 
-        userLocationLayer.setObjectListener(mapLocationListener)
         binding.mapView.map.apply {
             addCameraListener(cameraListener)
             addInputListener(mapInputListener)
@@ -122,13 +139,18 @@ class MainActivity : AppCompatActivity() {
             findMyLocationFab.setOnClickListener {
                 if (locationPermission) {
                     cameraToUserPosition()
-                    cameraListener.followUserLocation = true
                 } else {
                     requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
                 }
             }
             headingFab.setOnClickListener {
-                userLocationLayer.isHeadingEnabled = !userLocationLayer.isHeadingEnabled
+                if (locationPermission) {
+                    userLocationLayer.isHeadingEnabled = true
+                    cameraListener.followUserLocation = userLocationLayer.isHeadingEnabled
+                    cameraToUserPosition(17f)
+                } else {
+                    requestPermissionLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                }
             }
             northFab.setOnClickListener {
                 val cameraPosition = binding.mapView.map.cameraPosition
@@ -151,7 +173,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun moveMap(target: Point, zoom: Float = 16f, azimuth: Float = 0f, tilt: Float = 0f) {
+    fun moveMap(target: Point, zoom: Float = 15f, azimuth: Float = 0f, tilt: Float = 0f) {
         binding.mapView.map.move(
             CameraPosition(target, zoom, azimuth, tilt),
             Animation(Animation.Type.SMOOTH, 3f),
@@ -159,10 +181,12 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    //Dialog for tapping the mark: Delete or rename
     fun interactionWithMark(place: PlaceObject){
         val alertDialog: AlertDialog = this.let {
             val builder = AlertDialog.Builder(it)
             builder.apply {
+                setTitle(place.name)
                 setMessage(getString(R.string.dialog_mark_interaction))
                 setPositiveButton(
                     getString(R.string.rename_place)
@@ -184,6 +208,7 @@ class MainActivity : AppCompatActivity() {
         alertDialog.show()
     }
 
+    //Dialog for removing place
     fun deletePlace(place: PlaceObject) {
         val alertDialog: AlertDialog = this.let {
             val builder = AlertDialog.Builder(it)
@@ -205,6 +230,7 @@ class MainActivity : AppCompatActivity() {
         alertDialog.show()
     }
 
+    //Dialog when adding new place
     fun addPlace(target: Point) {
         val alertDialog: AlertDialog = this.let {
             val builder = AlertDialog.Builder(it)
@@ -228,6 +254,7 @@ class MainActivity : AppCompatActivity() {
         alertDialog.show()
     }
 
+    //Dialog when renaming place
     fun renamePlace(place: PlaceObject) {
         val alertDialog: AlertDialog = this.let {
             val builder = AlertDialog.Builder(it)
@@ -259,6 +286,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+    //we save ID for place as userData on the mark
     private fun addMarker(
         target: Point,
         userData: Any? = null,
@@ -277,10 +305,10 @@ class MainActivity : AppCompatActivity() {
         mapObjectCollection.traverse(RemoveMapObjectByPoint(onMapInteractionListener, point))
     }
 
-    private fun cameraToUserPosition() {
+    private fun cameraToUserPosition(zoom: Float = 16f) {
         if (userLocationLayer.cameraPosition() != null) {
             userLocation = userLocationLayer.cameraPosition()!!.target
-            moveMap(userLocation)
+            moveMap(userLocation, zoom)
         } else {
             Snackbar.make(
                 binding.mapView,
@@ -309,23 +337,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    fun setAnchor() {
-        userLocationLayer.setAnchor(
-            PointF(
-                (binding.mapView.width() * 0.5).toFloat(),
-                (binding.mapView.height() * 0.5).toFloat()
-            ),
-            PointF(
-                (binding.mapView.width() * 0.5).toFloat(),
-                (binding.mapView.height() * 0.83).toFloat()
-            )
-        )
-        cameraListener.followUserLocation = false
-    }
 
-    fun noAnchor() {
-        userLocationLayer.resetAnchor()
-    }
 
     override fun onStop() {
         binding.mapView.onStop()

@@ -4,9 +4,8 @@ import com.yandex.mapkit.map.CameraListener
 import com.yandex.mapkit.map.CameraPosition
 import com.yandex.mapkit.map.CameraUpdateReason
 import com.yandex.mapkit.map.Map
-import ru.netology.mapmarkers.MainActivity
 
-class MapCameraListener(val mainActivity: MainActivity) : CameraListener {
+class MapCameraListener(val onMapInteractionListener: OnMapInteractionListener) : CameraListener {
     var followUserLocation = false
 
     override fun onCameraPositionChanged(
@@ -17,11 +16,12 @@ class MapCameraListener(val mainActivity: MainActivity) : CameraListener {
     ) {
         if (finish) {
             if (followUserLocation) {
-                mainActivity.setAnchor()
+               onMapInteractionListener.setAnchor()
+                followUserLocation = false
             }
         } else {
             if (!followUserLocation) {
-                mainActivity.noAnchor()
+                onMapInteractionListener.noAnchor()
             }
         }
     }

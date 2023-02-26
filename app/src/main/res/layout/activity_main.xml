@@ -51,7 +51,7 @@
         tools:itemCount="5"
         app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
         tools:listitem="@layout/places_list_layout"
-        android:visibility="visible"
+        android:visibility="gone"
         android:background="@color/white"
         />
 
