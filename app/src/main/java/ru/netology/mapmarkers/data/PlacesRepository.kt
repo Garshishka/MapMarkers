@@ -12,8 +12,19 @@ class PlacesRepository(
         }
     }
 
+    fun getLatestId(): Long = dao.getNewest().id
+
     fun save(place: PlaceObject) {
         dao.save(PlaceEntity.fromDto(place))
+    }
+
+    fun delete(id: Long){
+        dao.deleteById(id)
+    }
+
+    fun getById(id: Long): PlaceObject{
+        val entity = dao.findById(id)
+        return PlaceObject(entity.id, Point(entity.latitude,entity.longitude), entity.name)
     }
 
 }

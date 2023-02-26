@@ -1,4 +1,4 @@
-package ru.netology.mapmarkers.listeners
+package ru.netology.mapmarkers.mapListeners
 
 import android.content.Context
 import android.graphics.Color

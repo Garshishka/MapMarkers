@@ -1,10 +1,13 @@
-package ru.netology.mapmarkers
+package ru.netology.mapmarkers.mapListeners
 
+import com.yandex.mapkit.geometry.Point
 import com.yandex.mapkit.map.*
 
-class Traversal(val mainActivity: MainActivity) : MapObjectVisitor {
+class RemoveMapObjectByPoint(val onMapInteractionListener: OnMapInteractionListener, val point: Point) : MapObjectVisitor {
     override fun onPlacemarkVisited(mapObject: PlacemarkMapObject) {
-        //mainActivity.test2(mapObject)
+        if(mapObject.geometry.latitude == point.latitude && mapObject.geometry.longitude == point.longitude) {
+            onMapInteractionListener.removeMapObject(mapObject)
+        }
     }
 
     override fun onPolylineVisited(p0: PolylineMapObject) {
@@ -17,12 +20,10 @@ class Traversal(val mainActivity: MainActivity) : MapObjectVisitor {
     }
 
     override fun onCollectionVisitStart(p0: MapObjectCollection): Boolean {
-        println("Collection start")
         return true
     }
 
     override fun onCollectionVisitEnd(p0: MapObjectCollection) {
-        println("Collection end")
     }
 
     override fun onClusterizedCollectionVisitStart(p0: ClusterizedPlacemarkCollection): Boolean {

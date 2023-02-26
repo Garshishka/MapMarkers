@@ -7,4 +7,11 @@
     <string name="permission">Разрешение</string>
     <string name="new_place">Новое место</string>
     <string name="dialog_new_place">Задайте имя для нового места</string>
+    <string name="add_place">Добавить</string>
+    <string name="back">Назад</string>
+    <string name="dialog_rename_place">Задайте новое имя для этого места</string>
+    <string name="rename_place">Переименовать</string>
+    <string name="dialog_delete_place">Уверены что хотите удалить это место?</string>
+    <string name="delete_place">Удалить</string>
+    <string name="dialog_mark_interaction">Вы хотите переименовать или удалить это место?</string>
 </resources>

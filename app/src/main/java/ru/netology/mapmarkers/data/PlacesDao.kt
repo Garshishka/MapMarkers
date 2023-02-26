@@ -10,6 +10,12 @@ interface PlacesDao {
     @Query("SELECT * FROM PlaceEntity ORDER BY id DESC")
     fun getAll(): LiveData<List<PlaceEntity>>
 
+    @Query("SELECT * FROM PlaceEntity ORDER BY id DESC")
+    fun getNewest(): PlaceEntity
+
+    @Query("SELECT * FROM PlaceEntity WHERE id = :id")
+    fun findById(id: Long) : PlaceEntity
+
     @Insert
     fun insert(place: PlaceEntity)
 
@@ -19,4 +25,6 @@ interface PlacesDao {
     fun save(place: PlaceEntity) =
         if (place.id == 0L) insert(place) else updateContentByID(place.id, place.name)
 
+    @Query("DELETE FROM PlaceEntity WHERE id = :id")
+    fun deleteById(id: Long)
 }

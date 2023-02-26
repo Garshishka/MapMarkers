@@ -20,16 +20,20 @@ import com.yandex.mapkit.map.MapObjectCollection
 import com.yandex.mapkit.map.PlacemarkMapObject
 import com.yandex.mapkit.user_location.UserLocationLayer
 import com.yandex.runtime.image.ImageProvider
+import ru.netology.mapmarkers.data.PlaceObject
 import ru.netology.mapmarkers.databinding.ActivityMainBinding
 import ru.netology.mapmarkers.di.DependencyContainer
-import ru.netology.mapmarkers.listeners.MapCameraListener
-import ru.netology.mapmarkers.listeners.MapInputListener
-import ru.netology.mapmarkers.listeners.MapLocationListener
+import ru.netology.mapmarkers.mapListeners.*
+import ru.netology.mapmarkers.ui.OnInteractionListener
+import ru.netology.mapmarkers.viewmodel.MainViewModel
+import ru.netology.mapmarkers.viewmodel.ViewModelFactory
 
 
 class MainActivity : AppCompatActivity() {
+    //Dependency part
     private val container = DependencyContainer.getInstance()
 
+    //Permission part
     private var locationPermission = false
     private val requestPermissionLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { isGranted ->
@@ -40,20 +44,51 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
+    //UI and logic part
     lateinit var binding: ActivityMainBinding
-
-
     val viewModel: MainViewModel by viewModels {
         ViewModelFactory(container.repository)
     }
+    private val onInteractionListener = object : OnInteractionListener {
 
+        override fun onPlaceClick(place: PlaceObject) {
+            moveMap(place.point)
+        }
 
+        override fun onEditClick(place: PlaceObject) {
+            renamePlace(place)
+        }
+
+        override fun onDeleteClick(place: PlaceObject) {
+            deletePlace(place)
+        }
+
+    }
+    private val onMapInteractionListener = object : OnMapInteractionListener {
+
+        override fun onMapLongClick(point: Point) {
+            addPlace(point)
+        }
+
+        override fun removeMapObject(mapObject: PlacemarkMapObject) {
+            mapObjectCollection.remove(mapObject)
+        }
+
+        override fun onMarkClick(id: Long, point: Point) {
+            val place = viewModel.getById(id)
+            moveMap(place.point)
+            interactionWithMark(place)
+        }
+    }
+
+    //Map part
     private var userLocation = Point(0.0, 0.0)
     private lateinit var mapObjectCollection: MapObjectCollection
     private lateinit var userLocationLayer: UserLocationLayer
     private val mapLocationListener = MapLocationListener(this, this)
     private val cameraListener = MapCameraListener(this)
-    private val mapInputListener = MapInputListener(this, this)
+    private val mapInputListener = MapInputListener(onMapInteractionListener)
+    private var markerTapListener = PlaceTapListener(onMapInteractionListener)
     private var firstTimePlacingMarkers = true
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -79,9 +114,7 @@ class MainActivity : AppCompatActivity() {
         binding.mapView.map.apply {
             addCameraListener(cameraListener)
             addInputListener(mapInputListener)
-            //addTapListener()
         }
-
     }
 
     private fun subscribe() {
@@ -106,17 +139,16 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-        val adapter = PlacesAdapter(this)//, places)
+        val adapter = PlacesAdapter(onInteractionListener)
         binding.placesView.adapter = adapter
 
         viewModel.data.observe(this) { places ->
             adapter.submitList(places)
             if (firstTimePlacingMarkers) {
-                places.forEach { addMarker(it.point) }
+                places.forEach { addMarker(it.point,it.id) }
                 firstTimePlacingMarkers = false
             }
         }
-
     }
 
     fun moveMap(target: Point, zoom: Float = 16f, azimuth: Float = 0f, tilt: Float = 0f) {
@@ -127,6 +159,52 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    fun interactionWithMark(place: PlaceObject){
+        val alertDialog: AlertDialog = this.let {
+            val builder = AlertDialog.Builder(it)
+            builder.apply {
+                setMessage(getString(R.string.dialog_mark_interaction))
+                setPositiveButton(
+                    getString(R.string.rename_place)
+                ) { _, _ ->
+                    renamePlace(place)
+                }
+                setNeutralButton(
+                    getString(R.string.delete_place)
+                ) {_, _ ->
+                    deletePlace(place)
+                }
+                setNegativeButton(
+                    getString(R.string.back)
+                ) { _, _ ->
+                }
+            }
+            builder.create()
+        }
+        alertDialog.show()
+    }
+
+    fun deletePlace(place: PlaceObject) {
+        val alertDialog: AlertDialog = this.let {
+            val builder = AlertDialog.Builder(it)
+            builder.apply {
+                setMessage(getString(R.string.dialog_delete_place))
+                setPositiveButton(
+                    getString(R.string.delete_place)
+                ) { _, _ ->
+                    traverseMapObjectsToRemove(place.point)
+                    viewModel.delete(place.id)
+                }
+                setNegativeButton(
+                    getString(R.string.back)
+                ) { _, _ ->
+                }
+            }
+            builder.create()
+        }
+        alertDialog.show()
+    }
+
     fun addPlace(target: Point) {
         val alertDialog: AlertDialog = this.let {
             val builder = AlertDialog.Builder(it)
@@ -135,14 +213,14 @@ class MainActivity : AppCompatActivity() {
                 val textInput = makeTextInput()
                 setView(textInput)
                 setPositiveButton(
-                    "ok"
-                ) { dialog, id ->
-                    viewModel.save(target, textInput.text.toString())
-                    addMarker(target)
+                    getString(R.string.add_place)
+                ) { _, _ ->
+                    val id = viewModel.save(target, textInput.text.toString())
+                    addMarker(target, id)
                 }
                 setNegativeButton(
-                    "no"
-                ) { dialog, id ->
+                    getString(R.string.back)
+                ) { _, _ ->
                 }
             }
             builder.create()
@@ -150,23 +228,53 @@ class MainActivity : AppCompatActivity() {
         alertDialog.show()
     }
 
-    fun makeTextInput(): TextInputEditText = TextInputEditText(this).apply {
-        setText(R.string.new_place)
+    fun renamePlace(place: PlaceObject) {
+        val alertDialog: AlertDialog = this.let {
+            val builder = AlertDialog.Builder(it)
+            builder.apply {
+                setMessage(getString(R.string.dialog_rename_place))
+                val textInput = makeTextInput(place.name)
+                setView(textInput)
+                setPositiveButton(
+                    getString(R.string.rename_place)
+                ) { _, _ ->
+                    viewModel.save(place.point, textInput.text.toString(), place.id)
+                }
+                setNegativeButton(
+                    getString(R.string.back)
+                ) { _, _ ->
+                }
+            }
+            builder.create()
+        }
+        alertDialog.show()
     }
 
+    private fun makeTextInput(oldName: String? = null): TextInputEditText =
+        TextInputEditText(this).apply {
+            if (oldName == null) {
+                setText(R.string.new_place)
+            } else {
+                setText(oldName)
+            }
+        }
 
     private fun addMarker(
         target: Point,
+        userData: Any? = null,
         pinGraphic: String = "location_pin.png",
-        userData: Any? = null
     ): PlacemarkMapObject {
         val marker = mapObjectCollection.addPlacemark(
             target,
             ImageProvider.fromAsset(this, pinGraphic)
         )
         marker.userData = userData
-        //markerTapListener?.let { marker.addTapListener(it) }
+        markerTapListener.let { marker.addTapListener(it) }
         return marker
+    }
+
+    private fun traverseMapObjectsToRemove(point: Point) {
+        mapObjectCollection.traverse(RemoveMapObjectByPoint(onMapInteractionListener, point))
     }
 
     private fun cameraToUserPosition() {

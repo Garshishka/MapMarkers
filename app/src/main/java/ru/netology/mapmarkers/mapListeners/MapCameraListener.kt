@@ -1,4 +1,4 @@
-package ru.netology.mapmarkers.listeners
+package ru.netology.mapmarkers.mapListeners
 
 import com.yandex.mapkit.map.CameraListener
 import com.yandex.mapkit.map.CameraPosition

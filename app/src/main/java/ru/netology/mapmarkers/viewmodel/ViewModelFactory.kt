@@ -1,4 +1,4 @@
-package ru.netology.mapmarkers
+package ru.netology.mapmarkers.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider

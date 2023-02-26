@@ -7,14 +7,17 @@ import androidx.recyclerview.widget.ListAdapter
 import androidx.recyclerview.widget.RecyclerView
 import ru.netology.mapmarkers.data.PlaceObject
 import ru.netology.mapmarkers.databinding.PlacesListLayoutBinding
+import ru.netology.mapmarkers.ui.OnInteractionListener
 
-class PlacesAdapter(val mainActivity: MainActivity) ://, private val places: List<PlaceObject>) :
+class PlacesAdapter(
+    private val onInteractionListener: OnInteractionListener,
+) :
     ListAdapter<PlaceObject, PlacesViewHolder>(PlaceDiffCallback()) {
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): PlacesViewHolder {
         val binding =
             PlacesListLayoutBinding.inflate(LayoutInflater.from(parent.context), parent, false)
-        return PlacesViewHolder(mainActivity, binding)
+        return PlacesViewHolder(binding, onInteractionListener)
     }
 
     override fun onBindViewHolder(holder: PlacesViewHolder, position: Int) {
@@ -24,20 +27,26 @@ class PlacesAdapter(val mainActivity: MainActivity) ://, private val places: Lis
 }
 
 class PlacesViewHolder(
-    val mainActivity: MainActivity,
-    private val binding: PlacesListLayoutBinding
+    private val binding: PlacesListLayoutBinding,
+    private val onInteractionListener: OnInteractionListener,
 ) :
     RecyclerView.ViewHolder(binding.root) {
     fun bind(place: PlaceObject) {
         binding.apply {
             val lat = place.point.latitude.toString().take(10) + "..."
             val long = place.point.longitude.toString().take(10) + "..."
-            placeCoords.text = "$lat and $long"
+            placeCoords.text = "$lat | $long"
 
             placeName.text = place.name
 
             placeCard.setOnClickListener {
-                mainActivity.moveMap(place.point)
+                onInteractionListener.onPlaceClick(place)
+            }
+            editButton.setOnClickListener {
+                onInteractionListener.onEditClick(place)
+            }
+            deleteButton.setOnClickListener {
+                onInteractionListener.onDeleteClick(place)
             }
         }
     }
